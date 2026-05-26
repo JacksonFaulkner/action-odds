@@ -6,8 +6,17 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "duckdb>=1.5.3",
+    "exa-py>=1.0.0",
+    "google-genai>=1.0.0",
+    "google-auth>=2.0.0",
+    "fastapi>=0.115.0",
+    "openai>=1.0.0",
     "pydantic>=2.13.4",
+    "uvicorn>=0.34.0",
 ]
+
+[project.scripts]
+dev = "main:dev"
 
 [dependency-groups]
 dev = [

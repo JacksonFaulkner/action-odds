@@ -48,32 +48,81 @@ def init_db(conn: duckdb.DuckDBPyConnection) -> None:
     """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS news (
-            id               VARCHAR PRIMARY KEY,
-            title            VARCHAR NOT NULL,
-            description      VARCHAR,
-            published_date   TIMESTAMPTZ,
-            source_url       VARCHAR NOT NULL,
-            threat_actor     VARCHAR,
-            exploit_status   VARCHAR,
-            severity         VARCHAR,
-            company_labels   VARCHAR[],
-            sector_labels    VARCHAR[],
-            embed_title      FLOAT[3072],
-            embed_description FLOAT[3072],
-            embed_source     FLOAT[3072],
-            ingested_at      TIMESTAMPTZ DEFAULT now()
+            id                 VARCHAR PRIMARY KEY,
+            title              VARCHAR NOT NULL,
+            description        VARCHAR,
+            summary            VARCHAR,
+            source_name        VARCHAR,
+            primary_company_id VARCHAR,
+            published_date     TIMESTAMPTZ,
+            source_url         VARCHAR NOT NULL,
+            threat_actor       VARCHAR,
+            exploit_status     VARCHAR,
+            severity           VARCHAR,
+            company_labels     VARCHAR[],
+            sector_labels      VARCHAR[],
+            embed_title        FLOAT[3072],
+            embed_description  FLOAT[3072],
+            embed_source       FLOAT[3072],
+            ingested_at        TIMESTAMPTZ DEFAULT now()
         )
     """)
+    # Migrate existing DBs that predate summary/source_name/primary_company_id columns
+    for col in ("summary VARCHAR", "source_name VARCHAR", "primary_company_id VARCHAR"):
+        try:
+            conn.execute(f"ALTER TABLE news ADD COLUMN {col}")
+        except Exception:
+            pass
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS news_packages (
-            news_id          VARCHAR NOT NULL REFERENCES news(id),
+        CREATE TABLE IF NOT EXISTS packages (
             name             VARCHAR NOT NULL,
             ecosystem        VARCHAR NOT NULL,
+            github_org       VARCHAR,
+            logo_url         VARCHAR,
             weekly_downloads INTEGER,
             cve_ids          VARCHAR[],
             epss_score       FLOAT,
             in_cisa_kev      BOOLEAN NOT NULL DEFAULT false,
+            risk_score       FLOAT,
+            last_enriched_at TIMESTAMPTZ,
+            sectors          VARCHAR[],
+            PRIMARY KEY (name, ecosystem)
+        )
+    """)
+    # Migrate existing DBs that predate new columns
+    for col in ("sectors VARCHAR[]", "risk_score FLOAT"):
+        try:
+            conn.execute(f"ALTER TABLE packages ADD COLUMN {col}")
+        except Exception:
+            pass
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS news_packages (
+            news_id   VARCHAR NOT NULL REFERENCES news(id),
+            name      VARCHAR NOT NULL,
+            ecosystem VARCHAR NOT NULL,
             PRIMARY KEY (news_id, name)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS cve_history (
+            osv_id         VARCHAR NOT NULL,
+            cve_id         VARCHAR,
+            name           VARCHAR NOT NULL,
+            ecosystem      VARCHAR NOT NULL,
+            published_date TIMESTAMPTZ,
+            modified_date  TIMESTAMPTZ,
+            severity       VARCHAR,
+            cvss_vector    VARCHAR,
+            PRIMARY KEY (osv_id, name, ecosystem)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS news_duplicates (
+            candidate_url    VARCHAR NOT NULL,
+            matched_news_id  VARCHAR NOT NULL REFERENCES news(id),
+            similarity_score FLOAT NOT NULL,
+            detected_at      TIMESTAMPTZ DEFAULT now(),
+            PRIMARY KEY (candidate_url, matched_news_id)
         )
     """)
 

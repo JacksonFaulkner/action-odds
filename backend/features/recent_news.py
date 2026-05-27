@@ -3,10 +3,17 @@ import hashlib
 import json
 import time
 from datetime import datetime
+from urllib.parse import urlparse
 
 from config import get_exa_client, get_openai_client
 from features.embedding import embed_document
 from models.models import NewsAnalysis, NewsEmbeddings, PackageRisk, RecentNews
+
+
+def _parse_source_name(url: str) -> str:
+    """Extract display-friendly domain from URL. e.g. 'www.bleepingcomputer.com' → 'bleepingcomputer.com'"""
+    netloc = urlparse(url).netloc
+    return netloc.removeprefix("www.")
 
 _QUERY = "software supply chain security breach vulnerability attack"
 _GPT_MODEL = "gpt-5-mini-2025-08-07"
@@ -94,10 +101,14 @@ async def fetch_news_gpt_structured(
             for p in raw_packages
         ]
 
+        gpt_summary = data.get("description", "")
+
         return RecentNews(
             id=_article_id(url),
             title=title,
             description=body[:500],
+            summary=gpt_summary,
+            source_name=_parse_source_name(url),
             published_date=getattr(result, "published_date", None),
             source_url=url,
             embeddings=NewsEmbeddings(
@@ -106,7 +117,7 @@ async def fetch_news_gpt_structured(
                 source=source_vec,
             ),
             analysis=NewsAnalysis(
-                description=data.get("description", ""),
+                description=gpt_summary,
                 company_labels=data.get("company_labels", []),
                 sector_labels=data.get("sector_labels", []),
                 affected_packages=packages,

@@ -92,7 +92,9 @@ class NewsEmbeddings(BaseModel):
 class RecentNews(BaseModel):
     id: str
     title: str
-    description: str
+    description: str          # raw article body (used for embeddings)
+    summary: str | None = None  # GPT 2-sentence summary (stored + served to FE)
+    source_name: str | None = None  # publication display name e.g. "Bleeping Computer"
     published_date: datetime | None
     source_url: str
     embeddings: NewsEmbeddings

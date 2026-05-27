@@ -30,6 +30,39 @@ class CreateUserRequest(BaseModel):
     username: str
 
 
+# --- News ---
+
+@router.get("/news")
+def list_news(
+    limit: int = 20,
+    conn: duckdb.DuckDBPyConnection = Depends(get_db),
+) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT id, title, summary, source_url, source_name,
+               published_date, sector_labels, primary_company_id
+        FROM news
+        WHERE published_date IS NOT NULL
+        ORDER BY published_date DESC
+        LIMIT ?
+        """,
+        [limit],
+    ).fetchall()
+    return [
+        {
+            "id": r[0],
+            "title": r[1],
+            "summary": r[2],
+            "url": r[3],
+            "source": r[4],
+            "published_at": r[5].isoformat() if r[5] else None,
+            "tags": r[6] or [],
+            "company_id": r[7],
+        }
+        for r in rows
+    ]
+
+
 # --- Companies ---
 
 @router.get("/companies")

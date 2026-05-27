@@ -7,7 +7,9 @@ MIN_DOWNLOADS = 100_000
 
 async def get_npm_downloads(client: httpx.AsyncClient, package: str) -> int:
     try:
-        r = await client.get(f"https://api.npmjs.org/downloads/point/last-week/{package}")
+        r = await client.get(
+            f"https://api.npmjs.org/downloads/point/last-week/{package}"
+        )
         return r.json().get("downloads", 0)
     except Exception:
         return 0
@@ -41,18 +43,25 @@ async def main():
         for keyword in ("npm", "pypi"):
             print(f"\n=== {keyword.upper()} ===")
 
-            r = await client.get(NVD_URL, params={
-                "keywordSearch": keyword,
-                "resultsPerPage": 20,
-            })
+            r = await client.get(
+                NVD_URL,
+                params={
+                    "keywordSearch": keyword,
+                    "resultsPerPage": 20,
+                },
+            )
             items = r.json().get("vulnerabilities", [])
 
             for item in items:
                 cve = item.get("cve", {})
                 cve_id = cve.get("id", "")
                 desc = next(
-                    (d["value"] for d in cve.get("descriptions", []) if d["lang"] == "en"),
-                    ""
+                    (
+                        d["value"]
+                        for d in cve.get("descriptions", [])
+                        if d["lang"] == "en"
+                    ),
+                    "",
                 )
                 packages = extract_packages(cve)
                 if not packages:
@@ -72,7 +81,9 @@ async def main():
                             score = metrics[key][0]["cvssData"]["baseScore"]
                             break
 
-                    print(f"{cve_id:25} {package:30} {downloads:>12,} downloads  CVSS: {score}")
+                    print(
+                        f"{cve_id:25} {package:30} {downloads:>12,} downloads  CVSS: {score}"
+                    )
                     print(f"  {desc[:120]}")
 
 

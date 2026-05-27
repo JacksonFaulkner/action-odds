@@ -11,7 +11,7 @@ from features.db import DB_PATH, init_db
 from features.news_repository import ingest_many
 from features.recent_news import fetch_news_gpt_structured
 
-_DAYS_BACK = 7
+_DAYS_BACK = int(sys.argv[1]) if len(sys.argv) > 1 else 7
 
 
 async def main() -> None:
